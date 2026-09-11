@@ -8,15 +8,33 @@ local S = BossPrepSound
 -------------------------------------------------
 -- Sound effects (raw SoundKit IDs - stable across the Classic clients)
 -------------------------------------------------
+-- `duration` is an approximate length in seconds (not queryable from the WoW
+-- API - PlaySound/PlaySoundFile don't expose it - so these are estimates by
+-- ear). Used only to pick a sensible default for how long an announced note
+-- waits before speaking (Options -> Alert Sound -> Note Delay); the slider
+-- always overrides it once touched.
 S.SOUNDS = {
-	{ key = "RAID_WARNING",   label = "Raid warning",   id = 8959 },
-	{ key = "READY_CHECK",    label = "Ready check",     id = 8960 },
-	{ key = "ALARM_CLOCK",    label = "Alarm clock",     id = 12889 },
-	{ key = "MAP_PING",       label = "Map ping",        id = 3175 },
-	{ key = "QUEST_COMPLETE", label = "Quest complete",  id = 878 },
-	{ key = "INVITE_CHIME",   label = "Invite chime",    id = 880 },
-	{ key = "PVP_QUEUE",      label = "PvP queue pop",   id = 8458 },
+	{ key = "RAID_WARNING",   label = "Raid warning",   id = 8959,  duration = 2.2 },
+	{ key = "READY_CHECK",    label = "Ready check",     id = 8960,  duration = 1.0 },
+	{ key = "ALARM_CLOCK",    label = "Alarm clock",     id = 12889, duration = 1.5 },
+	{ key = "MAP_PING",       label = "Map ping",        id = 3175,  duration = 0.5 },
+	{ key = "QUEST_COMPLETE", label = "Quest complete",  id = 878,   duration = 1.5 },
+	{ key = "INVITE_CHIME",   label = "Invite chime",    id = 880,   duration = 0.7 },
+	{ key = "PVP_QUEUE",      label = "PvP queue pop",   id = 8458,  duration = 2.0 },
 }
+
+-- Preferred default when the user hasn't explicitly picked a sound: Illidan's
+-- "You are not prepared!" line, if some other addon's LibSharedMedia
+-- registration happens to provide it. Matched loosely since different addons
+-- register it under slightly different names.
+local function isIllidanNotPrepared(label)
+	if not label then return false end
+	local l = label:lower()
+	return l:find("illidan", 1, true) and l:find("prepared", 1, true)
+end
+-- The clip runs a good 4+ seconds ("You are not prepared!" plus its tail) -
+-- give it a duration estimate too, same purpose as the built-ins above.
+local ILLIDAN_DURATION = 4.5
 
 -- Optional: LibSharedMedia-3.0, if some other addon on this account has it
 -- loaded. It's a shared registry that any addon can register sound files
@@ -43,21 +61,16 @@ function S.GetAllSounds()
 		end
 		table.sort(names)
 		for _, name in ipairs(names) do
-			table.insert(list, { key = "LSM:" .. name, label = name, file = tbl[name] })
+			table.insert(list, {
+				key = "LSM:" .. name,
+				label = name,
+				file = tbl[name],
+				duration = isIllidanNotPrepared(name) and ILLIDAN_DURATION or nil,
+			})
 		end
 	end
 
 	return list
-end
-
--- Preferred default when the user hasn't explicitly picked a sound: Illidan's
--- "You are not prepared!" line, if some other addon's LibSharedMedia
--- registration happens to provide it. Matched loosely since different addons
--- register it under slightly different names.
-local function isIllidanNotPrepared(label)
-	if not label then return false end
-	local l = label:lower()
-	return l:find("illidan", 1, true) and l:find("prepared", 1, true)
 end
 
 function S.DefaultSoundKey()
@@ -77,6 +90,15 @@ function S.GetSound(key)
 		if s.key == defKey then return s end
 	end
 	return all[1]
+end
+
+-- Default "Note Delay" (seconds) for whichever sound is currently selected -
+-- used whenever the user hasn't dragged the slider themselves
+-- (settings.noteAnnounceDelay stays nil until they do).
+function S.DefaultNoteDelay()
+	local s = BossPrepDB and BossPrepDB.settings or {}
+	local snd = S.GetSound(s.alertSoundKey)
+	return (snd and snd.duration) or 1.5
 end
 
 function S.PlaySound(key)
@@ -239,7 +261,8 @@ function S.PlayCue(problems, note)
 	else
 		S.PlaySound(s.alertSoundKey)
 		if hasNote then
-			local delay = tonumber(s.noteAnnounceDelay) or 1.5
+			local delay = tonumber(s.noteAnnounceDelay)
+			if delay == nil then delay = S.DefaultNoteDelay() end
 			if delay > 0 and C_Timer and C_Timer.NewTimer then
 				S.pendingNoteTimer = C_Timer.NewTimer(delay, function()
 					S.pendingNoteTimer = nil

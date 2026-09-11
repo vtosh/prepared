@@ -98,7 +98,11 @@ local function EnsureDB()
 		ttsVoiceID = nil,              -- nil = first available voice
 		ttsVolume = 100,               -- 0-100
 		ttsMinimal = false,            -- TTS says just "Changes required" instead of listing categories
-		noteAnnounceDelay = 1.5,       -- seconds to wait after a SOUND-mode cue before speaking an announced note
+		-- noteAnnounceDelay is also intentionally absent: nil lets
+		-- BossPrepSound.DefaultNoteDelay() match the currently selected
+		-- sound's own length (see Sound.lua). Only written once the user
+		-- drags the Note Delay slider (Options.lua sets
+		-- noteAnnounceDelayChosen alongside it).
 	}
 	BossPrepDB.settings = BossPrepDB.settings or {}
 	for key, value in pairs(defaultSettings) do
@@ -114,6 +118,12 @@ local function EnsureDB()
 	-- is marked chosen and is never touched again.
 	if BossPrepDB.settings.alertSoundKey == "RAID_WARNING" and not BossPrepDB.settings.alertSoundKeyChosen then
 		BossPrepDB.settings.alertSoundKey = nil
+	end
+
+	-- Same migration for noteAnnounceDelay: an earlier version baked a flat
+	-- 1.5s into every save file before the per-sound default existed.
+	if BossPrepDB.settings.noteAnnounceDelay == 1.5 and not BossPrepDB.settings.noteAnnounceDelayChosen then
+		BossPrepDB.settings.noteAnnounceDelay = nil
 	end
 
 	local key = GetCharKey()

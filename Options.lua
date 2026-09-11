@@ -61,23 +61,27 @@ O.soundDropdown = T.Dropdown(frame, 210, function(value)
 	settings().alertSoundKey = value
 	settings().alertSoundKeyChosen = true
 	BossPrepSound.PlaySound(value)
+	O:RefreshDelayDisplay() -- follow the new sound's own default, unless overridden
 end)
 O.soundDropdown:SetPoint("TOPLEFT", soundLabel, "BOTTOMLEFT", 0, -6)
 
 -- How long to wait after the sound effect before speaking an announced note,
 -- so the two don't talk over each other. Only meaningful in SOUND mode: TTS
 -- mode folds the note into the same spoken phrase, and NONE mode has no
--- sound effect to wait on.
+-- sound effect to wait on. Starts out matching the selected sound's own
+-- (estimated) length - BossPrepSound.DefaultNoteDelay() - until dragged,
+-- which pins it as an explicit override (settings.noteAnnounceDelayChosen).
 local delayLabel = T.FontString(frame, 10, "textDim", "")
 delayLabel:SetPoint("TOPLEFT", O.soundDropdown, "BOTTOMLEFT", 0, -16)
 delayLabel:SetText("NOTE DELAY")
 
-O.delaySlider = T.Slider(frame, 0, 4, 0.5)
+O.delaySlider = T.Slider(frame, 0, 5, 0.5)
 O.delaySlider:SetPoint("TOPLEFT", delayLabel, "BOTTOMLEFT", 2, -10)
 O.delaySlider:SetPoint("RIGHT", frame, "LEFT", 228, 0)
 O.delaySlider.format = function(v) return string.format("%.1fs", v) end
 O.delaySlider.onChange = function(value)
 	settings().noteAnnounceDelay = math.floor(value * 10 + 0.5) / 10
+	settings().noteAnnounceDelayChosen = true
 end
 
 -- TTS sub-group - voice/volume apply to spoken boss notes no matter which
@@ -225,6 +229,13 @@ O.cbReset     = MakeToggle("Reset tracking when I leave the raid", -64, "resetOn
 -------------------------------------------------
 -- Refresh
 -------------------------------------------------
+function O:RefreshDelayDisplay()
+	local s = settings()
+	local delay = tonumber(s.noteAnnounceDelay)
+	if delay == nil then delay = BossPrepSound.DefaultNoteDelay() end
+	self.delaySlider:SetValueSilent(delay)
+end
+
 function O:RefreshHlControls()
 	local on = settings().panelHighlights ~= false
 	local a = on and 1 or 0.35
@@ -313,7 +324,7 @@ function O:Refresh()
 	self.soundDropdown:SetOptions(soundOpts)
 	local snd = BossPrepSound.GetSound(s.alertSoundKey)
 	self.soundDropdown:SetSelected(snd and snd.key, snd and snd.label or "(pick one)")
-	self.delaySlider:SetValueSilent(tonumber(s.noteAnnounceDelay) or 1.5)
+	self:RefreshDelayDisplay()
 
 	local voiceOpts, selName = {}, nil
 	for _, v in ipairs(BossPrepSound.GetVoices()) do
