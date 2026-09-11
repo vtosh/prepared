@@ -2,9 +2,10 @@
 ## Title: Prepared
 ## Notes: Per-boss gear/spec/talent/glyph loadout reminders. Configure once per character, get warned if you're not set up right before or during a pull.
 ## Author: vtosh
-## Version: 1.1.0-test
+## Version: @project-version@
 ## SavedVariables: BossPrepDB
 ## X-Curse-Project-Name: Prepared
+## X-Curse-Project-ID:
 ## X-Category: Raid
 ## X-License: MIT
 ## OptionalDeps: LibStub, LibSharedMedia-3.0

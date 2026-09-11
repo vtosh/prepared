@@ -1,0 +1,4 @@
+package-as: Prepared
+ignore:
+  - tools
+  - RELEASING.md

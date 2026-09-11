@@ -1,0 +1,28 @@
+name: Package and release
+
+# Push a tag like "v1.0" to build a WoW-installable zip and publish it as a
+# GitHub Release. If the CF_API_KEY secret is set (and the .toc's
+# X-Curse-Project-ID is filled in), the same run also uploads the zip to
+# CurseForge. See RELEASING.md for one-time setup.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Package and release
+        uses: BigWigsMods/packager@v2
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+          GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
