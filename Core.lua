@@ -98,11 +98,10 @@ local function EnsureDB()
 		ttsVoiceID = nil,              -- nil = first available voice
 		ttsVolume = 100,               -- 0-100
 		ttsMinimal = false,            -- TTS says just "Changes required" instead of listing categories
-		-- noteAnnounceDelay is also intentionally absent: nil lets
-		-- BossPrepSound.DefaultNoteDelay() match the currently selected
-		-- sound's own length (see Sound.lua). Only written once the user
-		-- drags the Note Delay slider (Options.lua sets
-		-- noteAnnounceDelayChosen alongside it).
+		-- noteAnnounceDelayBySound is also intentionally absent: nil/missing
+		-- entries let BossPrepSound.GetNoteDelay() fall back to a sound's own
+		-- known length (see Sound.lua). Only written per-sound once the user
+		-- drags the Note Delay slider for that sound (Options.lua).
 	}
 	BossPrepDB.settings = BossPrepDB.settings or {}
 	for key, value in pairs(defaultSettings) do
@@ -120,11 +119,18 @@ local function EnsureDB()
 		BossPrepDB.settings.alertSoundKey = nil
 	end
 
-	-- Same migration for noteAnnounceDelay: an earlier version baked a flat
-	-- 1.5s into every save file before the per-sound default existed.
-	if BossPrepDB.settings.noteAnnounceDelay == 1.5 and not BossPrepDB.settings.noteAnnounceDelayChosen then
-		BossPrepDB.settings.noteAnnounceDelay = nil
+	-- Migrate the short-lived single-value noteAnnounceDelay override (before
+	-- it became per-sound) into the new per-sound map, keyed to whichever
+	-- sound it was set for.
+	if BossPrepDB.settings.noteAnnounceDelayChosen and BossPrepDB.settings.noteAnnounceDelay ~= nil then
+		local snd = BossPrepSound and BossPrepSound.GetSound(BossPrepDB.settings.alertSoundKey)
+		if snd then
+			BossPrepDB.settings.noteAnnounceDelayBySound = BossPrepDB.settings.noteAnnounceDelayBySound or {}
+			BossPrepDB.settings.noteAnnounceDelayBySound[snd.key] = BossPrepDB.settings.noteAnnounceDelay
+		end
 	end
+	BossPrepDB.settings.noteAnnounceDelay = nil
+	BossPrepDB.settings.noteAnnounceDelayChosen = nil
 
 	local key = GetCharKey()
 	BossPrepDB.chars[key] = BossPrepDB.chars[key] or {}

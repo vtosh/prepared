@@ -69,8 +69,9 @@ O.soundDropdown:SetPoint("TOPLEFT", soundLabel, "BOTTOMLEFT", 0, -6)
 -- so the two don't talk over each other. Only meaningful in SOUND mode: TTS
 -- mode folds the note into the same spoken phrase, and NONE mode has no
 -- sound effect to wait on. Starts out matching the selected sound's own
--- (estimated) length - BossPrepSound.DefaultNoteDelay() - until dragged,
--- which pins it as an explicit override (settings.noteAnnounceDelayChosen).
+-- (estimated) length; dragging it remembers an override for that specific
+-- sound (BossPrepSound.SetNoteDelayOverride), so switching sounds and back
+-- doesn't lose a delay you already tuned.
 local delayLabel = T.FontString(frame, 10, "textDim", "")
 delayLabel:SetPoint("TOPLEFT", O.soundDropdown, "BOTTOMLEFT", 0, -16)
 delayLabel:SetText("NOTE DELAY")
@@ -80,8 +81,7 @@ O.delaySlider:SetPoint("TOPLEFT", delayLabel, "BOTTOMLEFT", 2, -10)
 O.delaySlider:SetPoint("RIGHT", frame, "LEFT", 228, 0)
 O.delaySlider.format = function(v) return string.format("%.1fs", v) end
 O.delaySlider.onChange = function(value)
-	settings().noteAnnounceDelay = math.floor(value * 10 + 0.5) / 10
-	settings().noteAnnounceDelayChosen = true
+	BossPrepSound.SetNoteDelayOverride(math.floor(value * 10 + 0.5) / 10)
 end
 
 -- TTS sub-group - voice/volume apply to spoken boss notes no matter which
@@ -230,10 +230,7 @@ O.cbReset     = MakeToggle("Reset tracking when I leave the raid", -64, "resetOn
 -- Refresh
 -------------------------------------------------
 function O:RefreshDelayDisplay()
-	local s = settings()
-	local delay = tonumber(s.noteAnnounceDelay)
-	if delay == nil then delay = BossPrepSound.DefaultNoteDelay() end
-	self.delaySlider:SetValueSilent(delay)
+	self.delaySlider:SetValueSilent(BossPrepSound.GetNoteDelay())
 end
 
 function O:RefreshHlControls()

@@ -456,6 +456,7 @@ local function openMenu(dd)
 	local rowWidth = scrollable and (width - SCROLLBAR_W) or width
 
 	local y = 0
+	local selIndex
 	for i, opt in ipairs(opts) do
 		local row = menu.rows[i]
 		if not row then
@@ -476,6 +477,7 @@ local function openMenu(dd)
 		row:SetPoint("TOPLEFT", 0, y)
 		row.text:SetText(opt.text or "")
 		local isSel = (dd.selectedValue ~= nil and dd.selectedValue == opt.value)
+		if isSel then selIndex = i end
 		row.text:SetTextColor(u(isSel and T.color.accent or T.color.text))
 		if opt.disabled then
 			row:SetScript("OnClick", nil)
@@ -492,10 +494,19 @@ local function openMenu(dd)
 
 	local totalRowsHeight = #opts * ROWH
 	local visibleHeight = math.min(totalRowsHeight, MAX_VISIBLE_ROWS * ROWH)
+	local maxScroll = totalRowsHeight - visibleHeight
+
+	-- Open scrolled so the current selection sits in the middle of the
+	-- visible rows, instead of always starting at the top of a long list.
+	local initialScroll = 0
+	if selIndex then
+		local selCenter = (selIndex - 1) * ROWH + ROWH / 2
+		initialScroll = math.max(0, math.min(maxScroll, selCenter - visibleHeight / 2))
+	end
 
 	content:SetSize(rowWidth, totalRowsHeight)
 	scrollFrame:SetSize(rowWidth, visibleHeight)
-	scrollFrame:SetVerticalScroll(0)
+	scrollFrame:SetVerticalScroll(initialScroll)
 
 	menu:SetWidth(width + 6 + (scrollable and SCROLLBAR_W or 0))
 	menu:SetHeight(visibleHeight + 8)
@@ -503,12 +514,11 @@ local function openMenu(dd)
 	menu:SetPoint("TOPLEFT", dd, "BOTTOMLEFT", 0, -2)
 
 	if scrollable then
-		local maxScroll = totalRowsHeight - visibleHeight
 		scrollbar:ClearAllPoints()
 		scrollbar:SetPoint("TOPRIGHT", menu, "TOPRIGHT", -3, -4)
 		scrollbar:SetPoint("BOTTOMRIGHT", menu, "BOTTOMRIGHT", -3, 4)
 		scrollbar:SetMinMaxValues(0, maxScroll)
-		scrollbar:SetValue(0)
+		scrollbar:SetValue(initialScroll)
 		scrollbar:Show()
 	else
 		scrollbar:Hide()

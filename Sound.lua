@@ -34,7 +34,7 @@ local function isIllidanNotPrepared(label)
 end
 -- The clip runs a good 4+ seconds ("You are not prepared!" plus its tail) -
 -- give it a duration estimate too, same purpose as the built-ins above.
-local ILLIDAN_DURATION = 4.5
+local ILLIDAN_DURATION = 4.0
 
 -- Optional: LibSharedMedia-3.0, if some other addon on this account has it
 -- loaded. It's a shared registry that any addon can register sound files
@@ -93,12 +93,38 @@ function S.GetSound(key)
 end
 
 -- Default "Note Delay" (seconds) for whichever sound is currently selected -
--- used whenever the user hasn't dragged the slider themselves
--- (settings.noteAnnounceDelay stays nil until they do).
+-- its own known/estimated length, or a generic fallback for anything else
+-- (a custom LSM sound we don't have an estimate for).
 function S.DefaultNoteDelay()
 	local s = BossPrepDB and BossPrepDB.settings or {}
 	local snd = S.GetSound(s.alertSoundKey)
 	return (snd and snd.duration) or 1.5
+end
+
+-- Effective Note Delay to actually use: a per-sound override the user
+-- dragged the slider to (settings.noteAnnounceDelayBySound, keyed by
+-- resolved sound key) if there is one for the current sound, else that
+-- sound's own default. Overrides are remembered per sound, so switching
+-- sounds and back doesn't lose a delay you already tuned.
+function S.GetNoteDelay()
+	local s = BossPrepDB and BossPrepDB.settings or {}
+	local snd = S.GetSound(s.alertSoundKey)
+	local overrides = s.noteAnnounceDelayBySound
+	if snd and overrides and overrides[snd.key] ~= nil then
+		return overrides[snd.key]
+	end
+	return (snd and snd.duration) or 1.5
+end
+
+-- Remember `seconds` as the Note Delay for whichever sound is currently
+-- selected (called when the user drags the slider).
+function S.SetNoteDelayOverride(seconds)
+	BossPrep.EnsureDB()
+	local s = BossPrepDB.settings
+	local snd = S.GetSound(s.alertSoundKey)
+	if not snd then return end
+	s.noteAnnounceDelayBySound = s.noteAnnounceDelayBySound or {}
+	s.noteAnnounceDelayBySound[snd.key] = seconds
 end
 
 function S.PlaySound(key)
@@ -231,8 +257,8 @@ end
 -- volume options in the settings panel apply no matter which sound mode is
 -- selected as the main cue. In TTS mode the note is folded into the same
 -- phrase as the loadout problems instead of being spoken twice; in SOUND
--- mode it's delayed (settings.noteAnnounceDelay) so it doesn't talk over
--- the sound effect.
+-- mode it's delayed (S.GetNoteDelay()) so it doesn't talk over the sound
+-- effect.
 function S.PlayCue(problems, note)
 	local s = BossPrepDB and BossPrepDB.settings or {}
 	local mode = s.alertSoundMode or "SOUND"
@@ -261,8 +287,7 @@ function S.PlayCue(problems, note)
 	else
 		S.PlaySound(s.alertSoundKey)
 		if hasNote then
-			local delay = tonumber(s.noteAnnounceDelay)
-			if delay == nil then delay = S.DefaultNoteDelay() end
+			local delay = S.GetNoteDelay()
 			if delay > 0 and C_Timer and C_Timer.NewTimer then
 				S.pendingNoteTimer = C_Timer.NewTimer(delay, function()
 					S.pendingNoteTimer = nil
