@@ -98,6 +98,7 @@ local function EnsureDB()
 		ttsVoiceID = nil,              -- nil = first available voice
 		ttsVolume = 100,               -- 0-100
 		ttsMinimal = false,            -- TTS says just "Changes required" instead of listing categories
+		noteAnnounceDelay = 1.5,       -- seconds to wait after a SOUND-mode cue before speaking an announced note
 	}
 	BossPrepDB.settings = BossPrepDB.settings or {}
 	for key, value in pairs(defaultSettings) do

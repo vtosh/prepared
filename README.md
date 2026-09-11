@@ -96,8 +96,10 @@ Open `/prep`, pick your raid, and click a boss on the left. Each boss has:
   Sound is set to a sound effect or Text-to-speech (voice/volume in
   **Options → Alert Sound** apply either way). When Alert Sound *is* set
   to Text-to-speech, an announced note is folded after the "switch X"
-  phrase instead of playing twice. A note alone (nothing to fix) still
-  raises the banner. With **Options → Alert Sound → Minimal alerts**
+  phrase instead of playing twice; when it's a sound effect, the note
+  waits for **Note Delay** (also in Options, default 1.5s) to elapse
+  first so it doesn't talk over the sound. A note alone (nothing to fix)
+  still raises the banner. With **Options → Alert Sound → Minimal alerts**
   ticked, the spoken cue drops the per-category list and just says
   "changes required" (an announced note still reads in full).
 

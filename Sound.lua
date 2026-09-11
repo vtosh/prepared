@@ -208,12 +208,19 @@ end
 -- TTS regardless of the chosen alert-sound mode - that's why the voice and
 -- volume options in the settings panel apply no matter which sound mode is
 -- selected as the main cue. In TTS mode the note is folded into the same
--- phrase as the loadout problems instead of being spoken twice.
+-- phrase as the loadout problems instead of being spoken twice; in SOUND
+-- mode it's delayed (settings.noteAnnounceDelay) so it doesn't talk over
+-- the sound effect.
 function S.PlayCue(problems, note)
 	local s = BossPrepDB and BossPrepDB.settings or {}
 	local mode = s.alertSoundMode or "SOUND"
 	note = plain(note)
 	local hasNote = note and note ~= ""
+
+	if S.pendingNoteTimer then
+		S.pendingNoteTimer:Cancel()
+		S.pendingNoteTimer = nil
+	end
 
 	if mode == "NONE" then
 		if hasNote then S.Speak(note) end
@@ -231,13 +238,27 @@ function S.PlayCue(problems, note)
 		S.Speak(phrase)
 	else
 		S.PlaySound(s.alertSoundKey)
-		if hasNote then S.Speak(note) end
+		if hasNote then
+			local delay = tonumber(s.noteAnnounceDelay) or 1.5
+			if delay > 0 and C_Timer and C_Timer.NewTimer then
+				S.pendingNoteTimer = C_Timer.NewTimer(delay, function()
+					S.pendingNoteTimer = nil
+					S.Speak(note)
+				end)
+			else
+				S.Speak(note)
+			end
+		end
 	end
 end
 
 -- Stop whatever the cue is currently playing (sound effect or speech).
 -- Called when the alert banner is dismissed.
 function S.StopCue()
+	if S.pendingNoteTimer then
+		S.pendingNoteTimer:Cancel()
+		S.pendingNoteTimer = nil
+	end
 	if S.lastHandle and StopSound then
 		pcall(StopSound, S.lastHandle)
 	end

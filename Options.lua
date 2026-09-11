@@ -10,8 +10,9 @@ local u = T.u
 
 -- Taller than it used to be: the voice/volume block now shows alongside the
 -- sound-effect picker (SOUND mode + TTS available is the tallest combo since
--- notes can announce through TTS no matter which mode is chosen).
-local W, H = 470, 410
+-- notes can announce through TTS no matter which mode is chosen), plus the
+-- note-delay slider under the sound-effect picker.
+local W, H = 470, 465
 
 local frame = CreateFrame("Frame", "BossPrepOptionsFrame", UIParent)
 frame:SetSize(W, H)
@@ -62,6 +63,22 @@ O.soundDropdown = T.Dropdown(frame, 210, function(value)
 	BossPrepSound.PlaySound(value)
 end)
 O.soundDropdown:SetPoint("TOPLEFT", soundLabel, "BOTTOMLEFT", 0, -6)
+
+-- How long to wait after the sound effect before speaking an announced note,
+-- so the two don't talk over each other. Only meaningful in SOUND mode: TTS
+-- mode folds the note into the same spoken phrase, and NONE mode has no
+-- sound effect to wait on.
+local delayLabel = T.FontString(frame, 10, "textDim", "")
+delayLabel:SetPoint("TOPLEFT", O.soundDropdown, "BOTTOMLEFT", 0, -16)
+delayLabel:SetText("NOTE DELAY")
+
+O.delaySlider = T.Slider(frame, 0, 4, 0.5)
+O.delaySlider:SetPoint("TOPLEFT", delayLabel, "BOTTOMLEFT", 2, -10)
+O.delaySlider:SetPoint("RIGHT", frame, "LEFT", 228, 0)
+O.delaySlider.format = function(v) return string.format("%.1fs", v) end
+O.delaySlider.onChange = function(value)
+	settings().noteAnnounceDelay = math.floor(value * 10 + 0.5) / 10
+end
 
 -- TTS sub-group - voice/volume apply to spoken boss notes no matter which
 -- alert-sound mode is chosen (notes always speak via TTS when their own
@@ -116,7 +133,7 @@ local hlSep = frame:CreateTexture(nil, "ARTWORK")
 hlSep:SetColorTexture(u(T.color.borderStrong))
 hlSep:SetWidth(1)
 hlSep:SetPoint("TOP", frame, "TOPLEFT", 238, -40)
-hlSep:SetHeight(228)
+hlSep:SetHeight(283)
 
 local hlHeader = T.SectionHeader(frame, "Panel Highlights")
 hlHeader:SetPoint("TOPLEFT", 252, -42)
@@ -180,11 +197,11 @@ end
 -- Other toggles
 -------------------------------------------------
 local otherDivider = T.Divider(frame)
-otherDivider:SetPoint("TOPLEFT", 14, -284)
-otherDivider:SetPoint("TOPRIGHT", -14, -284)
+otherDivider:SetPoint("TOPLEFT", 14, -339)
+otherDivider:SetPoint("TOPRIGHT", -14, -339)
 
 local otherHeader = T.SectionHeader(frame, "General")
-otherHeader:SetPoint("TOPLEFT", 18, -298)
+otherHeader:SetPoint("TOPLEFT", 18, -353)
 
 local function MakeToggle(labelText, yOff, key, onChange)
 	local cb = T.Checkbox(frame, labelText)
@@ -218,10 +235,11 @@ function O:RefreshHlControls()
 end
 
 -- Lays out the conditional blocks top-to-bottom under the mode dropdown:
--- sound-effect picker (SOUND mode only), then the TTS voice/volume block
--- (whenever TTS is available, independent of mode - boss notes speak
--- through it regardless of the chosen alert sound), then the "Minimal
--- alerts" checkbox (TTS mode only - it only affects the loadout phrase).
+-- sound-effect picker + note-delay slider (SOUND mode only), then the TTS
+-- voice/volume block (whenever TTS is available, independent of mode - boss
+-- notes speak through it regardless of the chosen alert sound), then the
+-- "Minimal alerts" checkbox (TTS mode only - it only affects the loadout
+-- phrase).
 function O:RefreshCueControls()
 	local mode = settings().alertSoundMode or "SOUND"
 	local hasTTS = BossPrepSound.HasTTS()
@@ -231,12 +249,19 @@ function O:RefreshCueControls()
 	local soundShown = (mode == "SOUND")
 	soundLabel:SetShown(soundShown)
 	self.soundDropdown:SetShown(soundShown)
+	delayLabel:SetShown(soundShown)
+	self.delaySlider:SetShown(soundShown)
 	if soundShown then
 		soundLabel:ClearAllPoints()
 		soundLabel:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, offset)
 		self.soundDropdown:ClearAllPoints()
 		self.soundDropdown:SetPoint("TOPLEFT", soundLabel, "BOTTOMLEFT", 0, -6)
-		anchor, offset = self.soundDropdown, -16
+		delayLabel:ClearAllPoints()
+		delayLabel:SetPoint("TOPLEFT", self.soundDropdown, "BOTTOMLEFT", 0, -16)
+		self.delaySlider:ClearAllPoints()
+		self.delaySlider:SetPoint("TOPLEFT", delayLabel, "BOTTOMLEFT", 2, -10)
+		self.delaySlider:SetPoint("RIGHT", frame, "LEFT", 228, 0)
+		anchor, offset = self.delaySlider, -18
 	end
 
 	self.ttsMissing:SetShown(not hasTTS)
@@ -288,6 +313,7 @@ function O:Refresh()
 	self.soundDropdown:SetOptions(soundOpts)
 	local snd = BossPrepSound.GetSound(s.alertSoundKey)
 	self.soundDropdown:SetSelected(snd and snd.key, snd and snd.label or "(pick one)")
+	self.delaySlider:SetValueSilent(tonumber(s.noteAnnounceDelay) or 1.5)
 
 	local voiceOpts, selName = {}, nil
 	for _, v in ipairs(BossPrepSound.GetVoices()) do
