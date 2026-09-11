@@ -1,0 +1,32 @@
+## Interface: 50504, 50500, 50400, 50300
+## Title: Prepared
+## Notes: Per-boss gear/spec/talent/glyph loadout reminders. Configure once per character, get warned if you're not set up right before or during a pull.
+## Author: vtosh
+## Version: 1.1.0-test
+## SavedVariables: BossPrepDB
+## X-Curse-Project-Name: Prepared
+## X-Category: Raid
+## X-License: MIT
+## OptionalDeps: LibStub, LibSharedMedia-3.0
+
+# --- Libraries / compat shims ---
+Compat.lua
+Theme.lua
+Sound.lua
+
+# --- Data (extend by dropping more files in Bosses\ and listing them here) ---
+Bosses\Data.lua
+Bosses\SiegeOfOrgrimmar.lua
+
+# --- Core logic ---
+Core.lua
+Profiles.lua
+Detection.lua
+Alert.lua
+Highlight.lua
+Picker.lua
+
+# --- UI last, since it references everything above ---
+UI.lua
+Options.lua
+PanelButton.lua
